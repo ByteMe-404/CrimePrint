@@ -1,40 +1,87 @@
-
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>All Firebase Data</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Fingerprint System</title>
 
 <style>
-body {
+body{
     font-family: Arial;
-    background: #f1f5ff;
+    background:#eef3ff;
     padding:20px;
 }
-.card {
-    background:white;
+.header{
+    background:#3b6cff;
+    color:white;
     padding:20px;
+    font-size:20px;
     border-radius:10px;
-    margin-bottom:15px;
-    box-shadow:0 2px 5px rgba(0,0,0,0.1);
 }
-h2 {
-    color:#3355aa;
+.card{
+    background:white;
+    padding:15px;
+    margin-top:15px;
+    border-radius:10px;
+    box-shadow:0 2px 6px rgba(0,0,0,.1);
+}
+input{
+    width:95%;
+    padding:8px;
+    margin:5px 0;
+}
+button{
+    padding:10px 20px;
+    background:#3b6cff;
+    border:none;
+    color:white;
+    border-radius:7px;
 }
 </style>
 </head>
 <body>
 
-<h2>All Users in Firebase</h2>
-<div id="list">Loading...</div>
+<div class="header">Real-Time Fingerprint System</div>
+
+<!-- STATUS CARD -->
+<div class="card">
+<h3>Status</h3>
+<p id="status">waiting</p>
+</div>
+
+<!-- USER INFO -->
+<div class="card" id="userCard" style="display:none;">
+<h3>User Info</h3>
+<p>Name: <span id="name"></span></p>
+<p>Location: <span id="location"></span></p>
+<p>NID: <span id="nid"></span></p>
+<p>Age: <span id="age"></span></p>
+</div>
+
+<!-- ADD USER (shown only when not_found) -->
+<div class="card" id="addCard" style="display:none;">
+<h3>User Not Found</h3>
+<p>Please add user details:</p>
+
+<input id="uid" placeholder="Fingerprint ID"><br>
+<input id="uname" placeholder="Name"><br>
+<input id="uloc" placeholder="Location"><br>
+<input id="unid" placeholder="NID"><br>
+<input id="uage" placeholder="Age"><br>
+
+<button onclick="addUser()">Add User</button>
+</div>
+
 
 <!-- Firebase Scripts -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-// Firebase
+// -----------------------------
+// Firebase Setup
+// -----------------------------
 var firebaseConfig = {
     databaseURL: "https://crimeprint-4cf4e-default-rtdb.firebaseio.com/"
 };
@@ -42,30 +89,70 @@ firebase.initializeApp(firebaseConfig);
 
 var db = firebase.database();
 
-// Read all users
-db.ref("users").on("value", function(snapshot){
 
-    var html = "";
+// -----------------------------
+// Real-time scan_status
+// -----------------------------
+db.ref("scan_status").on("value", function(snapshot){
 
-    snapshot.forEach(function(child){
+    var data = snapshot.val();
+    if(!data) return;
 
-        var u = child.val();
+    document.getElementById("status").innerText = data.stage;
 
-        html += `
-        <div class='card'>
-            <h3>Fingerprint ID: ${child.key}</h3>
-            <p>Name: ${u.name}</p>
-            <p>Location: ${u.location}</p>
-            <p>NID: ${u.nid}</p>
-            <p>Age: ${u.age}</p>
-        </div>
-        `;
+    // Hide both by default
+    document.getElementById("userCard").style.display = "none";
+    document.getElementById("addCard").style.display = "none";
 
-    });
 
-    document.getElementById("list").innerHTML = html;
+    // FOUND → load user
+    if(data.stage == "found"){
+        loadUser(data.id);
+    }
+
+    // NOT FOUND → show add form
+    if(data.stage == "not_found"){
+        document.getElementById("addCard").style.display = "block";
+    }
 
 });
+
+
+// -----------------------------
+// Load a user
+// -----------------------------
+function loadUser(id){
+    db.ref("users/" + id).once("value").then(function(s){
+        var u = s.val();
+        if(!u) return;
+
+        document.getElementById("userCard").style.display = "block";
+
+        document.getElementById("name").innerText = u.name;
+        document.getElementById("location").innerText = u.location;
+        document.getElementById("nid").innerText = u.nid;
+        document.getElementById("age").innerText = u.age;
+    });
+}
+
+
+// -----------------------------
+// Add user
+// -----------------------------
+function addUser(){
+    var id = document.getElementById("uid").value;
+
+    var data = {
+        name: document.getElementById("uname").value,
+        location: document.getElementById("uloc").value,
+        nid: document.getElementById("unid").value,
+        age: document.getElementById("uage").value
+    };
+
+    db.ref("users/" + id).set(data);
+
+    alert("User added successfully!");
+}
 </script>
 
 </body>
