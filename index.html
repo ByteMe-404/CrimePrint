@@ -1,0 +1,72 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>All Firebase Data</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: #f1f5ff;
+    padding:20px;
+}
+.card {
+    background:white;
+    padding:20px;
+    border-radius:10px;
+    margin-bottom:15px;
+    box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+h2 {
+    color:#3355aa;
+}
+</style>
+</head>
+<body>
+
+<h2>All Users in Firebase</h2>
+<div id="list">Loading...</div>
+
+<!-- Firebase Scripts -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+// Firebase
+var firebaseConfig = {
+    databaseURL: "https://crimeprint-4cf4e-default-rtdb.firebaseio.com/"
+};
+firebase.initializeApp(firebaseConfig);
+
+var db = firebase.database();
+
+// Read all users
+db.ref("users").on("value", function(snapshot){
+
+    var html = "";
+
+    snapshot.forEach(function(child){
+
+        var u = child.val();
+
+        html += `
+        <div class='card'>
+            <h3>Fingerprint ID: ${child.key}</h3>
+            <p>Name: ${u.name}</p>
+            <p>Location: ${u.location}</p>
+            <p>NID: ${u.nid}</p>
+            <p>Age: ${u.age}</p>
+        </div>
+        `;
+
+    });
+
+    document.getElementById("list").innerHTML = html;
+
+});
+</script>
+
+</body>
+</html>
