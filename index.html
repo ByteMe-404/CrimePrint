@@ -1,207 +1,266 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CrimePrint</title>
+
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
   <style>
     body {
-      font-family: "Segoe UI", Arial;
-      background: #f0f3f7;
+      font-family: Arial;
+      background: linear-gradient(to right, #111, #222);
+      color: white;
+      padding: 40px;
       display: flex;
       justify-content: center;
-      padding-top: 50px;
     }
 
-    #container {
+    #box {
+      background: #1e1e1e;
       width: 380px;
-      background: #fff;
       padding: 25px;
-      border-radius: 15px;
-      box-shadow: 0px 5px 20px rgba(0, 0, 0, 0.15);
-      animation: fadeIn 0.4s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+      border-radius: 12px;
+      box-shadow: 0px 0px 25px rgba(0,0,0,0.5);
+      border: 1px solid #333;
     }
 
     h2 {
       text-align: center;
-      margin-bottom: 15px;
-      color: #333;
+      margin-bottom: 25px;
+      font-weight: 600;
+      letter-spacing: 1px;
     }
 
     #status {
-      padding: 10px;
+      color: #4fc3f7;
       font-weight: bold;
-      background: #e8eef6;
-      color: #1a3d7c;
-      border-radius: 10px;
-      display: inline-block;
-      width: 100%;
-      text-align: center;
-      margin-bottom: 20px;
     }
 
-    .box-section {
-      padding: 18px;
-      background: #fafafa;
-      border-radius: 12px;
-      margin-top: 10px;
-      border: 1px solid #ddd;
-      animation: slideIn 0.4s ease;
-    }
-
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    input {
+    input, textarea {
       width: 100%;
       padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      margin-top: 10px;
+      margin-top: 8px;
+      border-radius: 6px;
+      border: none;
+      background: #2a2a2a;
+      color: white;
+      outline: none;
       font-size: 15px;
     }
 
-    button {
-      width: 100%;
-      margin-top: 15px;
+    textarea {
+      height: 80px;
+      resize: none;
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: #999;
+    }
+
+    .btn {
+      width: 48%;
       padding: 12px;
-      background: #1a73e8;
-      color: white;
-      font-size: 16px;
       border: none;
-      border-radius: 10px;
+      border-radius: 6px;
+      font-size: 16px;
+      margin-top: 15px;
       cursor: pointer;
-      transition: 0.2s;
-    }
-
-    button:hover {
-      background: #0b59c7;
-    }
-
-    .found {
-      color: #0c8c2c;
       font-weight: bold;
+      transition: 0.2s ease;
     }
 
-    .not-found {
-      color: #c91d1d;
+    .save-btn { background: #43a047; color: white; }
+    .save-btn:hover { background: #2e7d32; }
+
+    .discard-btn { background: #e53935; color: white; }
+    .discard-btn:hover { background: #b71c1c; }
+
+    .update-btn { background: #1e88e5; width: 100%; margin-top: 10px; color: white; }
+    .update-btn:hover { background: #1565c0; }
+
+    .section-title {
+      margin-top: 18px;
       font-weight: bold;
+      color: #4fc3f7;
+      margin-bottom: 5px;
+    }
+
+    .info-text {
+      background: #2a2a2a;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      color: #ddd;
     }
   </style>
 </head>
 
 <body>
 
-<div id="container">
-  <h2>🔍 CrimePrint Fingerprint System</h2>
+<div id="box">
+  <h2>CrimePrint System</h2>
 
-  <div id="status">Waiting...</div>
+  <p><strong>Status:</strong> <span id="status">Waiting...</span></p>
+  <p><strong>Fingerprint ID:</strong> <span id="scanID">None</span></p>
 
-  <div id="new-user" class="box-section" style="display:none;">
-    <h3 class="not-found">New Fingerprint Detected</h3>
-    <p><b>New ID:</b> <span id="newID"></span></p>
+  <!-- New fingerprint information input -->
+  <div id="newInfoBox" style="display:none;">
+    <p class="section-title">Enter Criminal Details</p>
+    <input id="userName" placeholder="Name">
+    <textarea id="userDetails" placeholder="Crime details"></textarea>
 
-    <input id="nameInput" placeholder="Enter full name">
-    <button onclick="saveName()">Save Name</button>
+    <div style="display:flex; justify-content:space-between;">
+      <button id="saveBtn" class="btn save-btn" style="display:none;">SAVE</button>
+      <button id="discardBtn" class="btn discard-btn" style="display:none;">DON'T SAVE</button>
+    </div>
   </div>
 
-  <div id="found-user" class="box-section" style="display:none;">
-    <h3 class="found">Match Found</h3>
-    <p><b>ID:</b> <span id="foundID"></span></p>
-    <p><b>Name:</b> <span id="foundName"></span></p>
+  <!-- Existing user info -->
+  <div id="existingInfoBox" style="display:none;">
+    <p class="section-title">Previous Record:</p>
+    <div class="info-text" id="prevName"></div>
+    <div class="info-text" id="prevDetails"></div>
+
+    <p class="section-title">Update Information:</p>
+    <input id="updateName" placeholder="Update Name">
+    <textarea id="updateDetails" placeholder="Update Details"></textarea>
+
+    <button id="updateSaveBtn" class="btn update-btn">SAVE UPDATE</button>
   </div>
 </div>
 
-<script type="module">
-
-  // FIREBASE IMPORTS
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set, get } 
-    from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
-
-  // CONFIG
+<script>
   const firebaseConfig = {
-    apiKey: "AIzaSyATRJk4sSFb0er9E83nxdEMbgRAPDw9BXg",
+    apiKey: "AIzaSyDtitp4EmZH3PbkzbHJKcDX9dy1nFhleQc",
     authDomain: "crimeprint-4cf4e.firebaseapp.com",
     databaseURL: "https://crimeprint-4cf4e-default-rtdb.firebaseio.com",
     projectId: "crimeprint-4cf4e",
-    storageBucket: "crimeprint-4cf4e.firebasestorage.app",
-    messagingSenderId: "7136933754",
-    appId: "1:7136933754:web:d369fc2dc9c1eb839208c3",
-    measurementId: "G-TFLEE8SXET"
+    storageBucket: "crimeprint-4cf4e.appspot.com",
+    messagingSenderId: "1234567890",
+    appId: "1:1234567890:web:abcdef"
   };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-  const statusBox = document.getElementById("status");
-  const newUserBox = document.getElementById("new-user");
-  const foundUserBox = document.getElementById("found-user");
-  const nameInput = document.getElementById("nameInput");
+  const statusEl = document.getElementById("status");
+  const scanIDEl = document.getElementById("scanID");
 
-  let currentID = null;
+  const newInfoBox = document.getElementById("newInfoBox");
+  const existingInfoBox = document.getElementById("existingInfoBox");
 
-  // Listen for ESP32 scan events
-  onValue(ref(db, "scan/last"), async (snapshot) => {
-    const id = snapshot.val();
-    if (!id) return;
+  const userName = document.getElementById("userName");
+  const userDetails = document.getElementById("userDetails");
 
-    currentID = id;
-    statusBox.textContent = "Processing Scan: " + id;
+  const prevName = document.getElementById("prevName");
+  const prevDetails = document.getElementById("prevDetails");
 
-    const fpSnap = await get(ref(db, "fingerprints/" + id));
+  const updateName = document.getElementById("updateName");
+  const updateDetails = document.getElementById("updateDetails");
+  const updateSaveBtn = document.getElementById("updateSaveBtn");
 
-    if (fpSnap.exists()) {
-      newUserBox.style.display = "none";
-      foundUserBox.style.display = "block";
+  const saveBtn = document.getElementById("saveBtn");
+  const discardBtn = document.getElementById("discardBtn");
 
-      document.getElementById("foundID").textContent = id;
-      document.getElementById("foundName").textContent = fpSnap.val().name;
+  // CLEAR FIELDS FUNCTION
+  function clearAllFields() {
+    userName.value = "";
+    userDetails.value = "";
+    updateName.value = "";
+    updateDetails.value = "";
+    prevName.innerText = "";
+    prevDetails.innerText = "";
+  }
 
-      statusBox.textContent = "Match Found!";
-    } else {
-      foundUserBox.style.display = "none";
-      newUserBox.style.display = "block";
+  // Listen for fingerprint events
+  db.ref("scan").on("value", async (snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
 
-      document.getElementById("newID").textContent = id;
-      nameInput.value = "";
+    const id = data.last;
+    const pending = data.pending;
 
-      statusBox.textContent = "New Fingerprint Detected";
+    scanIDEl.innerText = id;
+
+    // New fingerprint
+    if (pending === true) {
+      clearAllFields();
+      statusEl.innerText = "New fingerprint detected";
+
+      newInfoBox.style.display = "block";
+      existingInfoBox.style.display = "none";
+      saveBtn.style.display = "inline-block";
+      discardBtn.style.display = "inline-block";
+    }
+
+    // Matched fingerprint
+    if (pending === false && id > 0) {
+      clearAllFields();
+      statusEl.innerText = "Fingerprint MATCHED";
+
+      newInfoBox.style.display = "none";
+      saveBtn.style.display = "none";
+      discardBtn.style.display = "none";
+
+      const userSnap = await db.ref("users/" + id).get();
+
+      if (userSnap.exists()) {
+        const user = userSnap.val();
+        prevName.innerText = "Name: " + user.name;
+        prevDetails.innerText = "Details: " + user.details;
+      } else {
+        prevName.innerText = "No previous record.";
+        prevDetails.innerText = "";
+      }
+
+      existingInfoBox.style.display = "block";
     }
   });
 
-  // Save new fingerprint name
-  async function saveName() {
-    const name = nameInput.value.trim();
+  // Save new user
+  saveBtn.onclick = () => {
+    const id = scanIDEl.innerText;
 
-    if (!name) {
-      alert("Enter a name.");
-      return;
-    }
+    const info = {
+      name: userName.value,
+      details: userDetails.value
+    };
 
-    statusBox.textContent = Saving "${name}"...;
+    db.ref("users/" + id).set(info);
 
-    await set(ref(db, "fingerprints/" + currentID), { name });
+    db.ref("scan/command").set("save");
+    db.ref("scan/pending").set(false);
 
-    alert("Saved!");
+    statusEl.innerText = "Saved!";
+    clearAllFields();
+    newInfoBox.style.display = "none";
+  };
 
-    newUserBox.style.display = "none";
-    foundUserBox.style.display = "block";
+  // Discard new user
+  discardBtn.onclick = () => {
+    db.ref("scan/command").set("discard");
+    db.ref("scan/pending").set(false);
 
-    document.getElementById("foundID").textContent = currentID;
-    document.getElementById("foundName").textContent = name;
+    statusEl.innerText = "Discarded!";
+    clearAllFields();
+    newInfoBox.style.display = "none";
+  };
 
-    statusBox.textContent = "Saved Successfully!";
-  }
+  // Update existing user
+  updateSaveBtn.onclick = () => {
+    const id = scanIDEl.innerText;
 
-  window.saveName = saveName;
+    const updated = {
+      name: updateName.value,
+      details: updateDetails.value
+    };
 
+    db.ref("users/" + id).update(updated);
+    statusEl.innerText = "Updated!";
+  };
 </script>
 
 </body>
